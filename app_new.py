@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Импорт моделей
-from models_new import ModelFactory
+from models import ModelFactory
 
 # ============================================
 # КОНФИГУРАЦИЯ МОДЕЛЕЙ
@@ -239,54 +239,11 @@ MODELS_CONFIG = {
         "requires_image": True,
         "multi_image": True,
     },
-    
-    "omnigen": {
-        "name": "🌟 OmniGen (NEW! Nov 2024)",
-        "category": "both",
-        "description": "Новейшая модель! Генерация + редактирование высокого качества",
-        "speed": "🔄 Средне (30-60 сек)",
-        "vram": "8 GB",
-        "features": ["НОВИНКА 2024", "Генерация", "Редактирование", "Высокое качество", "Мультимодальность"],
-        "settings": {
-            "height": {"default": 1024, "min": 512, "max": 1536, "step": 64},
-            "width": {"default": 1024, "min": 512, "max": 1536, "step": 64},
-            "steps": {"default": 50, "min": 20, "max": 100, "step": 1},
-            "guidance": {"default": 2.5, "min": 1.0, "max": 5.0, "step": 0.1},
-        },
-        "tips": [
-            "💡 Новейшая модель (ноябрь 2024)",
-            "💡 Отличное качество генерации",
-            "💡 Для редактирования загрузите изображение",
-            "💡 Работает на 8GB VRAM",
-        ],
-        "examples": [
-            "A professional photo of a golden retriever puppy",
-            "Transform this photo into anime style",
-            "Add sunglasses to the person",
-        ],
-        "lora_support": False,
-        "edit_support": True,
-        "inpaint_support": False,
-        "requires_image": False,
-    },
 }
 
 # Глобальные переменные
 current_model = None
 current_model_name = None
-generation_cancelled = False  # Флаг отмены генерации
-
-def cancel_generation():
-    """Отмена текущей генерации"""
-    global generation_cancelled
-    generation_cancelled = True
-    gr.Info("Отмена генерации...")
-    return "Отменяется..."
-
-def reset_cancel_flag():
-    """Сброс флага отмены"""
-    global generation_cancelled
-    generation_cancelled = False
 
 def load_config():
     """Загрузка конфигурации"""
@@ -317,50 +274,35 @@ def get_model_key_from_display(display_name: str) -> str:
     return "z-image-turbo"
 
 def load_model(model_display_name: str):
-    """Загрузка выбранной модели с автоповторами"""
+    """Загрузка выбранной модели"""
     global current_model, current_model_name
-    
-    import gc
     
     model_key = get_model_key_from_display(model_display_name)
     model_info = MODELS_CONFIG.get(model_key, {})
-    model_name = model_info.get('name', model_key)
     
-    gr.Info(f"Loading {model_name}... Check terminal for progress!")
-    logger.info(f"Loading model: {model_key}")
+    gr.Info(f"⏳ Загрузка модели {model_info.get('name', model_key)}...")
+    logger.info(f"Загрузка модели: {model_key}")
     
-    # Выгружаем предыдущую модель
-    if current_model is not None:
-        print("\n[INFO] Unloading previous model...")
-        try:
-            current_model.unload()
-        except:
-            pass
-        del current_model
-        current_model = None
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-    
-    # Загружаем новую с автоповторами
     try:
-        current_model = ModelFactory.create_generator(model_key)
-        success = current_model.load_model_with_retry()
-        
-        if success:
-            current_model_name = model_key
-            gr.Info(f"Model {model_name} loaded successfully!")
-            return f"[OK] {model_name} loaded!"
-        else:
+        # Выгружаем предыдущую модель
+        if current_model is not None:
+            del current_model
             current_model = None
-            gr.Error(f"Failed to load {model_name} after multiple attempts")
-            return f"[FAILED] Could not load {model_name}"
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        
+        # Загружаем новую
+        current_model = ModelFactory.create_generator(model_key)
+        current_model.load_model()
+        current_model_name = model_key
+        
+        gr.Info(f"✅ Модель {model_info.get('name', model_key)} загружена!")
+        return f"✅ Модель загружена: {model_info.get('name', model_key)}"
         
     except Exception as e:
-        logger.error(f"Error loading model: {e}")
-        gr.Error(f"Error: {str(e)}")
-        current_model = None
-        return f"[ERROR] {str(e)}"
+        logger.error(f"Ошибка загрузки модели: {e}")
+        gr.Error(f"❌ Ошибка: {str(e)}")
+        return f"❌ Ошибка загрузки: {str(e)}"
 
 def get_model_info_html(model_display_name: str) -> str:
     """Генерация HTML с информацией о модели"""
@@ -456,57 +398,36 @@ def generate_image(
     image_guidance: float = 1.5,
     true_cfg: float = 4.0,
     strength: float = 0.99,
-    progress=gr.Progress(track_tqdm=True),
 ):
-    """Универсальная функция генерации/редактирования с прогрессом"""
-    global current_model, current_model_name, generation_cancelled
-    
-    # Сброс флага отмены
-    reset_cancel_flag()
+    """Универсальная функция генерации/редактирования"""
+    global current_model, current_model_name
     
     if current_model is None:
-        gr.Warning("Сначала загрузите модель!")
-        return None, "Модель не загружена"
+        gr.Warning("⚠️ Сначала загрузите модель!")
+        return None, "❌ Модель не загружена"
     
     model_info = MODELS_CONFIG.get(current_model_name, {})
     
     # Проверка входных данных
     if model_info.get('requires_image') and input_image is None:
-        gr.Warning("Эта модель требует входное изображение!")
-        return None, "Загрузите изображение"
+        gr.Warning("⚠️ Эта модель требует входное изображение!")
+        return None, "❌ Загрузите изображение"
     
     if model_info.get('requires_mask') and mask_image is None:
-        gr.Warning("Эта модель требует маску!")
-        return None, "Нарисуйте маску"
+        gr.Warning("⚠️ Эта модель требует маску!")
+        return None, "❌ Нарисуйте маску"
     
     # Генерация seed если не указан
     if seed == -1:
         seed = torch.randint(0, 2**32 - 1, (1,)).item()
     
     try:
-        progress(0, desc="Подготовка к генерации...")
+        gr.Info(f"🎨 Генерация... ({steps} шагов)")
         start_time = datetime.now()
-        
-        # Проверка отмены
-        if generation_cancelled:
-            return None, "Генерация отменена"
-        
-        progress(0.1, desc=f"Генерация ({steps} шагов)...")
-        
-        # Callback для прогресса (для моделей diffusers)
-        def progress_callback(pipe, step, timestep, callback_kwargs):
-            global generation_cancelled
-            if generation_cancelled:
-                raise InterruptedError("Генерация отменена пользователем")
-            
-            pct = (step + 1) / steps
-            progress(0.1 + pct * 0.8, desc=f"Шаг {step + 1}/{steps}")
-            return callback_kwargs
         
         # Определяем тип операции
         if model_info.get('inpaint_support') and mask_image is not None:
             # Inpainting
-            progress(0.15, desc="Inpainting...")
             result = current_model.inpaint(
                 image=input_image,
                 mask=mask_image,
@@ -516,11 +437,9 @@ def generate_image(
                 guidance_scale=guidance,
                 strength=strength,
                 seed=seed,
-                callback_on_step_end=progress_callback,
             )
         elif model_info.get('edit_support') and input_image is not None:
             # Редактирование
-            progress(0.15, desc="Редактирование изображения...")
             if current_model_name == "instruct-pix2pix":
                 result = current_model.edit(
                     image=input_image,
@@ -529,7 +448,6 @@ def generate_image(
                     guidance_scale=guidance,
                     image_guidance_scale=image_guidance,
                     seed=seed,
-                    callback_on_step_end=progress_callback,
                 )
             elif current_model_name == "qwen-image-edit":
                 result = current_model.edit(
@@ -549,7 +467,6 @@ def generate_image(
                 )
         else:
             # Генерация с нуля
-            progress(0.15, desc="Генерация изображения...")
             result = current_model.generate(
                 prompt=prompt,
                 negative_prompt=negative_prompt,
@@ -558,14 +475,8 @@ def generate_image(
                 num_inference_steps=steps,
                 guidance_scale=guidance,
                 seed=seed,
-                callback_on_step_end=progress_callback,
             )
         
-        # Проверка отмены после генерации
-        if generation_cancelled:
-            return None, "Генерация отменена"
-        
-        progress(0.95, desc="Сохранение результата...")
         elapsed = (datetime.now() - start_time).total_seconds()
         
         # Сохранение
@@ -576,18 +487,14 @@ def generate_image(
         filepath = output_dir / filename
         result.save(filepath)
         
-        progress(1.0, desc="Готово!")
-        status = f"Готово за {elapsed:.1f} сек | Seed: {seed} | Файл: {filename}"
+        status = f"✅ Готово за {elapsed:.1f} сек | Seed: {seed} | Сохранено: {filename}"
         gr.Info(status)
         
         return result, status
-    
-    except InterruptedError:
-        return None, "Генерация отменена пользователем"
         
     except Exception as e:
         logger.error(f"Ошибка генерации: {e}")
-        gr.Error(f"Ошибка: {str(e)}")
+        gr.Error(f"❌ Ошибка: {str(e)}")
         return None, f"❌ Ошибка: {str(e)}"
 
 # ============================================
@@ -663,7 +570,10 @@ def create_interface():
     }
     """
     
-    with gr.Blocks(title="Image Generator Pro") as demo:
+    with gr.Blocks(css=css, title="🎨 Image Generator Pro", theme=gr.themes.Soft(
+        primary_hue="pink",
+        secondary_hue="blue",
+    )) as demo:
         
         gr.Markdown("""
         # 🎨 Image Generator Pro
@@ -724,6 +634,7 @@ def create_interface():
                             label="Маска (белое = заменить)",
                             type="pil",
                             visible=False,
+                            tool="sketch",
                         )
                 
                 # Параметры генерации
@@ -750,10 +661,8 @@ def create_interface():
                                         label="Strength (для Inpainting)",
                                         visible=False)
                 
-                # Кнопки генерации и остановки
-                with gr.Row():
-                    generate_btn = gr.Button("Сгенерировать", variant="primary", size="lg", scale=3)
-                    stop_btn = gr.Button("СТОП", variant="stop", size="lg", scale=1)
+                # Кнопка генерации
+                generate_btn = gr.Button("🎨 Сгенерировать", variant="primary", size="lg")
             
             # ===== ПРАВАЯ КОЛОНКА - Результат =====
             with gr.Column(scale=2):
@@ -792,13 +701,6 @@ def create_interface():
             ],
         )
         
-        # Остановка генерации
-        stop_btn.click(
-            fn=cancel_generation,
-            inputs=[],
-            outputs=[output_status],
-        )
-        
         # Генерация
         generate_btn.click(
             fn=generate_image,
@@ -826,51 +728,20 @@ def create_interface():
 # ============================================
 
 if __name__ == "__main__":
-    import sys
-    import io
-    
-    # Fix encoding for Windows
-    if sys.stdout.encoding != 'utf-8':
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    
     print("=" * 60)
-    print("IMAGE GENERATOR PRO")
+    print("🎨 IMAGE GENERATOR PRO")
     print("=" * 60)
     print()
-    print("Available models / Dostupnye modeli:")
+    print("Доступные модели:")
     for key, info in MODELS_CONFIG.items():
-        # Remove emojis for console
-        name = info['name'].encode('ascii', 'ignore').decode('ascii').strip()
-        desc = info['description']
-        print(f"  - {key}: {name} - {desc}")
+        print(f"  {info['name']}: {info['description']}")
     print()
-    print("=" * 60)
-    print("Starting server at http://localhost:7860")
     print("=" * 60)
     
     demo = create_interface()
-    
-    # Find available port
-    import socket
-    def find_free_port(start=7860, end=7880):
-        for port in range(start, end):
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    s.bind(('0.0.0.0', port))
-                    s.close()
-                    return port
-            except OSError:
-                continue
-        return 7890
-    
-    port = find_free_port()
-    print(f"Using port: {port}")
-    print(f"Open in browser: http://localhost:{port}")
-    
     demo.launch(
         server_name="0.0.0.0",
-        server_port=port,
+        server_port=7860,
         share=False,
         show_error=True,
     )

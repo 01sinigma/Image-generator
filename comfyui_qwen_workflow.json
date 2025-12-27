@@ -1,0 +1,111 @@
+{
+  "last_node_id": 12,
+  "last_link_id": 12,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UnetLoaderGGUF",
+      "pos": [50, 100],
+      "size": [315, 58],
+      "properties": {"Node name for S&R": "UnetLoaderGGUF"},
+      "widgets_values": ["qwen-image-edit-2511-Q4_K_M.gguf"]
+    },
+    {
+      "id": 2,
+      "type": "DualCLIPLoader",
+      "pos": [50, 200],
+      "size": [315, 106],
+      "properties": {"Node name for S&R": "DualCLIPLoader"},
+      "widgets_values": ["clip_l.safetensors", "t5xxl_fp8_e4m3fn.safetensors", "flux"]
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "pos": [50, 350],
+      "size": [315, 58],
+      "properties": {"Node name for S&R": "VAELoader"},
+      "widgets_values": ["sdvae.safetensors"]
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "pos": [400, 100],
+      "size": [400, 200],
+      "properties": {"Node name for S&R": "CLIPTextEncode"},
+      "widgets_values": ["A beautiful Chinese woman in red Hanfu, intricate embroidery, high quality, masterpiece, detailed"]
+    },
+    {
+      "id": 5,
+      "type": "CLIPTextEncode",
+      "pos": [400, 340],
+      "size": [400, 200],
+      "properties": {"Node name for S&R": "CLIPTextEncode"},
+      "widgets_values": ["blurry, low quality, bad anatomy, worst quality"]
+    },
+    {
+      "id": 6,
+      "type": "EmptySD3LatentImage",
+      "pos": [400, 580],
+      "size": [315, 106],
+      "properties": {"Node name for S&R": "EmptySD3LatentImage"},
+      "widgets_values": [512, 512, 1]
+    },
+    {
+      "id": 7,
+      "type": "KSampler",
+      "pos": [850, 200],
+      "size": [315, 262],
+      "properties": {"Node name for S&R": "KSampler"},
+      "widgets_values": [
+        0,
+        "randomize",
+        4,
+        1.0,
+        "euler",
+        "normal",
+        1.0
+      ]
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [1200, 200],
+      "size": [210, 46],
+      "properties": {"Node name for S&R": "VAEDecode"}
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "pos": [1450, 200],
+      "size": [315, 270],
+      "properties": {},
+      "widgets_values": ["ComfyUI_GGUF"]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 7, 0, "MODEL"],
+    [2, 2, 0, 4, 0, "CLIP"],
+    [3, 2, 0, 5, 0, "CLIP"],
+    [4, 4, 0, 7, 1, "CONDITIONING"],
+    [5, 5, 0, 7, 2, "CONDITIONING"],
+    [6, 6, 0, 7, 3, "LATENT"],
+    [7, 3, 0, 8, 1, "VAE"],
+    [8, 7, 0, 8, 0, "LATENT"],
+    [9, 8, 0, 9, 0, "IMAGE"]
+  ],
+  "groups": [
+    {
+      "title": "Qwen GGUF Image Generation",
+      "bounding": [30, 50, 1780, 700],
+      "color": "#3f789e"
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.8,
+      "offset": [0, 0]
+    }
+  },
+  "version": 0.4
+}

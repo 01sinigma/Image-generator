@@ -1,13 +1,45 @@
+# Core PyTorch
 torch>=2.0.0
 torchvision>=0.15.0
+
+# Diffusers & Transformers
 diffusers>=0.30.0
 transformers>=4.40.0
 accelerate>=0.30.0
+
+# Web Interface
 gradio>=4.0.0
+
+# Image Processing
 pillow>=10.0.0
-pyyaml>=6.0
-huggingface-hub>=0.20.0
 numpy>=1.24.0
+
+# Configuration
+pyyaml>=6.0
+
+# Hugging Face
+huggingface-hub>=0.20.0
 safetensors>=0.4.0
+
+# System Monitoring
 psutil>=5.9.0
+
+# LoRA Support (для применения LoRA адаптеров)
+peft>=0.10.0
+
+# ONNX Runtime для RMBG-2.0 (опционально, но рекомендуется для скорости)
+# Выберите одну из версий:
+# onnxruntime>=1.17.0        # CPU only
+# onnxruntime-gpu>=1.17.0    # GPU (CUDA 11.x)
+# onnxruntime-gpu>=1.18.0    # GPU (CUDA 12.x)
+
+# GGUF Support (опционально, для квантизированных моделей)
+# Установка с CUDA: CMAKE_ARGS="-DGGML_CUDA=on" pip install llama-cpp-python
+# llama-cpp-python>=0.2.50
+
+# Sentencepiece для токенизации
+sentencepiece>=0.1.99
+
+# Protobuf для сериализации
+protobuf>=4.0.0
 

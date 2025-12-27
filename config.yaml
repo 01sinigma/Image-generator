@@ -1,29 +1,107 @@
 # Image Generator Configuration
-# Поддержка Z-Image-Turbo для генерации и Qwen-Image-Edit-2511 для редактирования изображений
+# Мультимодельный генератор изображений с поддержкой LoRA и без цензуры
 
 # Модель по умолчанию
 default_model: "z-image-turbo"
 
 # Конфигурация моделей
 models:
-  # Z-Image-Turbo - генерация изображений
+  # ============================================
+  # Z-Image-Turbo - быстрая генерация
+  # ============================================
   z-image-turbo:
-    name: "Tongyi-MAI/Z-Image-Turbo"  # Или путь к локальной модели: "./models/z-image-turbo"
-    torch_dtype: "bfloat16"  # bfloat16 для оптимальной производительности (рекомендуется в документации)
-    low_cpu_mem_usage: false  # false согласно официальной документации
-    # local_path: "./models/z-image-turbo"  # Раскомментируйте для использования локальной модели
+    name: "Tongyi-MAI/Z-Image-Turbo"
+    torch_dtype: "bfloat16"
+    low_cpu_mem_usage: false
+    description: "Быстрая генерация (5-10 сек)"
+    features: ["generation", "fast"]
+    
+  # ============================================
+  # SDXL Turbo - универсальная с LoRA
+  # ============================================
+  sdxl-turbo:
+    name: "stabilityai/sdxl-turbo"
+    torch_dtype: "float16"
+    low_cpu_mem_usage: true
+    description: "Универсальная, поддержка LoRA, без цензуры"
+    features: ["generation", "lora", "uncensored", "fast"]
+    lora_support: true
+    safety_checker: false  # Отключаем цензуру
+    generation:
+      default_num_inference_steps: 4
+      default_guidance_scale: 0.0
   
-  # Qwen-Image-Edit-2511 - редактирование изображений
-  # Оптимизировано для RTX 4060 с 8GB VRAM (использует CPU offload)
-  # ПРИМЕЧАНИЕ: GGUF версия (unsloth/Qwen-Image-Edit-2511-GGUF) требует ComfyUI-GGUF
-  # и не может быть загружена через diffusers. Используется оригинальная модель
-  # с максимальными оптимизациями для 8GB VRAM.
+  # ============================================
+  # Pony Diffusion V6 - аниме/NSFW
+  # ============================================
+  pony-diffusion:
+    name: "AstraliteHeart/pony-diffusion-v6"
+    torch_dtype: "float16"
+    low_cpu_mem_usage: true
+    description: "Аниме стиль, NSFW из коробки"
+    features: ["generation", "lora", "uncensored", "anime"]
+    lora_support: true
+    safety_checker: false
+    generation:
+      default_num_inference_steps: 25
+      default_guidance_scale: 7.0
+  
+  # ============================================
+  # RealVisXL - фотореализм
+  # ============================================
+  realvis-xl:
+    name: "SG161222/RealVisXL_V4.0"
+    torch_dtype: "float16"
+    low_cpu_mem_usage: true
+    description: "Фотореалистичные изображения"
+    features: ["generation", "lora", "realistic"]
+    lora_support: true
+    safety_checker: false
+    generation:
+      default_num_inference_steps: 25
+      default_guidance_scale: 5.0
+  
+  # ============================================
+  # InstructPix2Pix - редактирование по тексту
+  # ============================================
+  instruct-pix2pix:
+    name: "timbrooks/instruct-pix2pix"
+    torch_dtype: "float16"
+    low_cpu_mem_usage: true
+    description: "Редактирование по инструкции (напр. 'сделай волосы синими')"
+    features: ["edit", "fast", "instruction"]
+    lora_support: false
+    safety_checker: false
+    generation:
+      default_num_inference_steps: 20
+      default_guidance_scale: 7.5
+      default_image_guidance_scale: 1.5
+  
+  # ============================================
+  # SDXL Inpainting - закрашивание/замена
+  # ============================================
+  sdxl-inpainting:
+    name: "diffusers/stable-diffusion-xl-1.0-inpainting-0.1"
+    torch_dtype: "float16"
+    low_cpu_mem_usage: true
+    description: "Замена/закрашивание части изображения (выделите область)"
+    features: ["inpaint", "lora", "uncensored"]
+    lora_support: true
+    safety_checker: false
+    generation:
+      default_num_inference_steps: 25
+      default_guidance_scale: 7.5
+  
+  # ============================================
+  # Qwen-Image-Edit - редактирование (тяжёлая)
+  # ============================================
   qwen-image-edit:
-    name: "Qwen/Qwen-Image-Edit-2511"  # Оригинальная модель (GGUF требует ComfyUI-GGUF)
-    torch_dtype: "float16"  # float16 для экономии памяти на 8GB VRAM
-    low_cpu_mem_usage: true  # ВКЛЮЧЕНО для экономии памяти на 8GB VRAM
-    use_gguf: false  # GGUF не поддерживается через diffusers, требуется ComfyUI-GGUF
-    # local_path: "./models/qwen-image-edit"  # Раскомментируйте после полного скачивания модели
+    name: "Qwen/Qwen-Image-Edit-2511"
+    torch_dtype: "float16"
+    low_cpu_mem_usage: true
+    use_gguf: false
+    description: "Мощное редактирование (1-3 мин, требует 32GB RAM)"
+    features: ["edit", "slow", "powerful"]
     edit:
       default_num_inference_steps: 40
       default_guidance_scale: 1.0
