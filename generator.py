@@ -1,13 +1,14 @@
 """
 Z-Image Generator Module
-Основной модуль для генерации изображений с использованием Z-Image-Turbo
+Основной модуль для генерации и редактирования изображений
+Поддерживает Z-Image-Turbo и Qwen-Image-Edit-2511
 """
 
 import os
 import torch
 import yaml
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union, List
 from PIL import Image
 import logging
 
@@ -29,7 +30,7 @@ class ZImageGenerator:
         
         Args:
             config_path: Путь к файлу конфигурации
-            model_type: Тип модели ('z-image-turbo'). 
+            model_type: Тип модели ('z-image-turbo' или 'qwen-image-edit'). 
                        Если None, используется модель из конфигурации
         """
         self.config = self._load_config(config_path)
@@ -120,6 +121,50 @@ class ZImageGenerator:
             )
         else:
             raise RuntimeError(f"Модель {self.model_type} не поддерживает генерацию изображений")
+    
+    def edit(
+        self,
+        images: Union[Image.Image, List[Image.Image]],
+        prompt: str,
+        negative_prompt: str = " ",
+        num_inference_steps: Optional[int] = None,
+        guidance_scale: Optional[float] = None,
+        true_cfg_scale: Optional[float] = None,
+        num_images_per_prompt: int = 1,
+        seed: Optional[int] = None,
+        save_path: Optional[str] = None
+    ) -> Image.Image:
+        """
+        Редактирование изображения(ий) по текстовому промпту
+        
+        Args:
+            images: Одно или несколько входных изображений
+            prompt: Текстовое описание желаемого результата
+            negative_prompt: Негативный промпт
+            num_inference_steps: Количество шагов инференса
+            guidance_scale: Масштаб guidance
+            true_cfg_scale: Масштаб CFG для Qwen
+            num_images_per_prompt: Количество изображений на промпт
+            seed: Случайное зерно
+            save_path: Путь для сохранения
+        
+        Returns:
+            PIL.Image: Отредактированное изображение
+        """
+        if isinstance(self.generator, BaseImageGenerator) and hasattr(self.generator, 'edit'):
+            return self.generator.edit(
+                images=images,
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+                num_inference_steps=num_inference_steps,
+                guidance_scale=guidance_scale,
+                true_cfg_scale=true_cfg_scale,
+                num_images_per_prompt=num_images_per_prompt,
+                seed=seed,
+                save_path=save_path
+            )
+        else:
+            raise RuntimeError(f"Модель {self.model_type} не поддерживает редактирование изображений")
     
     def generate_batch(
         self,

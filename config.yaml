@@ -1,5 +1,5 @@
 # Image Generator Configuration
-# Поддержка Z-Image-Turbo для генерации изображений
+# Поддержка Z-Image-Turbo для генерации и Qwen-Image-Edit-2511 для редактирования изображений
 
 # Модель по умолчанию
 default_model: "z-image-turbo"
@@ -11,7 +11,24 @@ models:
     name: "Tongyi-MAI/Z-Image-Turbo"  # Или путь к локальной модели: "./models/z-image-turbo"
     torch_dtype: "bfloat16"  # bfloat16 для оптимальной производительности (рекомендуется в документации)
     low_cpu_mem_usage: false  # false согласно официальной документации
-    # local_path: "./models/Z-Image-Turbo"  # Раскомментируйте для использования локальной модели
+    # local_path: "./models/z-image-turbo"  # Раскомментируйте для использования локальной модели
+  
+  # Qwen-Image-Edit-2511 - редактирование изображений
+  # Оптимизировано для RTX 4060 с 8GB VRAM (использует CPU offload)
+  # ПРИМЕЧАНИЕ: GGUF версия (unsloth/Qwen-Image-Edit-2511-GGUF) требует ComfyUI-GGUF
+  # и не может быть загружена через diffusers. Используется оригинальная модель
+  # с максимальными оптимизациями для 8GB VRAM.
+  qwen-image-edit:
+    name: "Qwen/Qwen-Image-Edit-2511"  # Оригинальная модель (GGUF требует ComfyUI-GGUF)
+    torch_dtype: "float16"  # float16 для экономии памяти на 8GB VRAM
+    low_cpu_mem_usage: true  # ВКЛЮЧЕНО для экономии памяти на 8GB VRAM
+    use_gguf: false  # GGUF не поддерживается через diffusers, требуется ComfyUI-GGUF
+    # local_path: "./models/qwen-image-edit"  # Раскомментируйте после полного скачивания модели
+    edit:
+      default_num_inference_steps: 40
+      default_guidance_scale: 1.0
+      default_true_cfg_scale: 4.0
+      default_num_images_per_prompt: 1
   
 device:
   type: "cuda"  # cuda - использовать GPU (RTX 4060), auto - автоматически, cpu - только CPU
@@ -39,5 +56,5 @@ web_interface:
   port: 7860
   share: false
   title: "Image Generator"
-  description: "Локальный генератор изображений с использованием Z-Image-Turbo"
+  description: "Локальный генератор и редактор изображений с использованием Z-Image-Turbo и Qwen-Image-Edit-2511"
 
