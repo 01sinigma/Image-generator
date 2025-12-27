@@ -1,0 +1,41 @@
+# Конфигурация для 8GB VRAM
+# Оптимизированная конфигурация для видеокарт с 8GB видеопамяти
+
+# Модель по умолчанию
+default_model: "z-image-turbo"
+
+# Конфигурация моделей
+models:
+  # Z-Image-Turbo - генерация изображений
+  z-image-turbo:
+    name: "Tongyi-MAI/Z-Image-Turbo"
+    torch_dtype: "float16"  # float16 вместо bfloat16 для экономии памяти
+    low_cpu_mem_usage: true  # Включено для экономии памяти
+
+device:
+  type: "cuda"
+  enable_cpu_offload: true  # КРИТИЧНО для 8GB VRAM - переносит часть модели в RAM
+
+optimization:
+  attention_backend: "sdpa"  # Стабильный вариант, не требует дополнительной памяти
+  compile_model: false  # Отключено - компиляция требует дополнительной памяти
+  enable_flash_attention: false  # Отключено - Flash Attention может занимать больше памяти
+
+generation:
+  default_height: 768  # Уменьшено с 1024 для экономии памяти
+  default_width: 768  # Уменьшено с 1024 для экономии памяти
+  default_num_inference_steps: 9
+  default_guidance_scale: 0.0
+  default_seed: null
+
+output:
+  directory: "outputs"
+  format: "png"
+  quality: 95
+
+web_interface:
+  port: 7860
+  share: false
+  title: "Image Generator (8GB VRAM)"
+  description: "Локальный генератор изображений - оптимизировано для 8GB VRAM"
+

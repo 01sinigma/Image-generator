@@ -1,0 +1,41 @@
+# Конфигурация БЕЗ CPU offload - максимальное использование GPU
+# Используйте эту конфигурацию если хотите максимальную скорость
+# Требует больше VRAM, но GPU будет использоваться на 100%
+
+# Модель по умолчанию
+default_model: "z-image-turbo"
+
+# Конфигурация моделей
+models:
+  z-image-turbo:
+    name: "Tongyi-MAI/Z-Image-Turbo"
+    torch_dtype: "float16"  # float16 для экономии памяти
+    low_cpu_mem_usage: true
+
+device:
+  type: "cuda"
+  enable_cpu_offload: false  # ОТКЛЮЧЕНО - модель полностью на GPU
+
+optimization:
+  attention_backend: "sdpa"
+  compile_model: false
+  enable_flash_attention: false
+
+generation:
+  default_height: 768  # Можно попробовать 1024 если хватит памяти
+  default_width: 768
+  default_num_inference_steps: 9
+  default_guidance_scale: 0.0
+  default_seed: null
+
+output:
+  directory: "outputs"
+  format: "png"
+  quality: 95
+
+web_interface:
+  port: 7860
+  share: false
+  title: "Image Generator (Max GPU)"
+  description: "Локальный генератор изображений - максимальное использование GPU"
+
